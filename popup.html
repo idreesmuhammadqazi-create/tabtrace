@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Browser Autopsy</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Browser Autopsy</h1>
+      <div id="site-info">
+        <div id="site-name">Loading...</div>
+        <div id="site-url">Loading...</div>
+      </div>
+    </div>
+    
+    <div class="status-section">
+      <div class="status-item">
+        <span class="label">CPU Activity:</span>
+        <div class="indicator-container">
+          <div id="cpu-indicator" class="indicator"></div>
+          <span id="cpu-score">0</span>
+        </div>
+      </div>
+      
+      <div class="status-item">
+        <span class="label">Memory Usage:</span>
+        <div class="indicator-container">
+          <div id="memory-indicator" class="indicator"></div>
+          <span id="memory-usage">N/A</span>
+        </div>
+      </div>
+      
+      <div class="status-item">
+        <span class="label">Network Activity:</span>
+        <div class="indicator-container">
+          <div id="network-indicator" class="indicator"></div>
+          <span id="network-level">Low</span>
+        </div>
+      </div>
+      
+      <div class="status-item">
+        <span class="label">Workers:</span>
+        <div class="indicator-container">
+          <div id="worker-indicator" class="indicator"></div>
+          <span id="worker-count">0</span>
+        </div>
+      </div>
+      
+      <div class="status-item">
+        <span class="label">WASM:</span>
+        <div class="indicator-container">
+          <div id="wasm-indicator" class="indicator"></div>
+          <span id="wasm-status">No</span>
+        </div>
+      </div>
+    </div>
+    
+    <div class="risk-section">
+      <div class="risk-label">Risk Indicator:</div>
+      <div id="risk-indicator" class="risk-indicator">Green</div>
+    </div>
+    
+    <div class="warnings-section">
+      <h3>Warnings</h3>
+      <ul id="warnings-list">
+        <li>No warnings</li>
+      </ul>
+    </div>
+    
+    <div class="controls-section">
+      <button id="pause-js">Pause JavaScript</button>
+      <button id="block-network">Block Network</button>
+      <button id="reload-no-scripts">Reload without Scripts</button>
+    </div>
+  </div>
+  
+  <script src="popup.js"></script>
+</body>
+</html>
