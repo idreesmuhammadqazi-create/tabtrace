@@ -5,24 +5,45 @@ document.addEventListener('DOMContentLoaded', function() {
       document.getElementById('site-name').textContent = new URL(tabs[0].url).hostname;
       document.getElementById('site-url').textContent = tabs[0].url;
       
-      // Request data from background script
-      chrome.runtime.sendMessage({
-        type: 'getTabData',
-        tabId: tabs[0].id
-      }, function(response) {
-        if (response) {
-          updateUI(response);
-        }
-      });
+      // Request data from background script initially
+      requestTabData(tabs[0].id);
+      
+      // Refresh data every second
+      setInterval(function() {
+        requestTabData(tabs[0].id);
+      }, 1000);
     }
   });
+  
+  function requestTabData(tabId) {
+    chrome.runtime.sendMessage({
+      type: 'getTabData',
+      tabId: tabId
+    }, function(response) {
+      if (response) {
+        updateUI(response);
+      }
+    });
+  }
   
   // Set up control buttons
   document.getElementById('pause-js').addEventListener('click', function() {
     chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
       if (tabs[0]) {
-        chrome.debugger.attach({tabId: tabs[0].id}, "1.0", function() {
-          chrome.debugger.sendCommand({tabId: tabs[0].id}, "Debugger.pause");
+        // First, check if we have the debugger permission
+        chrome.permissions.contains({permissions: ['debugger']}, function(hasPermission) {
+          if (!hasPermission) {
+            // Request the debugger permission
+            chrome.permissions.request({permissions: ['debugger']}, function(granted) {
+              if (granted) {
+                attachDebuggerAndPause(tabs[0].id);
+              } else {
+                alert('Debugger permission is required to pause JavaScript');
+              }
+            });
+          } else {
+            attachDebuggerAndPause(tabs[0].id);
+          }
         });
       }
     });
@@ -31,10 +52,20 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('block-network').addEventListener('click', function() {
     chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
       if (tabs[0]) {
-        chrome.debugger.attach({tabId: tabs[0].id}, "1.0", function() {
-          chrome.debugger.sendCommand({tabId: tabs[0].id}, "Network.setBlockedURLs", {
-            urls: ["*"]
-          });
+        // First, check if we have the debugger permission
+        chrome.permissions.contains({permissions: ['debugger']}, function(hasPermission) {
+          if (!hasPermission) {
+            // Request the debugger permission
+            chrome.permissions.request({permissions: ['debugger']}, function(granted) {
+              if (granted) {
+                blockNetworkRequests(tabs[0].id);
+              } else {
+                alert('Debugger permission is required to block network requests');
+              }
+            });
+          } else {
+            blockNetworkRequests(tabs[0].id);
+          }
         });
       }
     });
@@ -47,6 +78,22 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
   });
+  
+  document.getElementById('clear-cache').addEventListener('click', function() {
+    chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+      if (tabs[0]) {
+        // Clear cache for current tab
+        chrome.browsingData.remove({
+          "origins": [tabs[0].url.match(/https?:\/\/[^\/]+/)[0]]
+        }, {
+          "cache": true
+        }, function() {
+          // Reload after clearing cache
+          chrome.tabs.reload(tabs[0].id, {bypassCache: true});
+        });
+      }
+    });
+  });
 });
 
 // Update UI with tab data
@@ -55,13 +102,13 @@ function updateUI(tabData) {
   const cpuScore = Math.min(100, tabData.cpuActivityScore || 0);
   document.getElementById('cpu-score').textContent = cpuScore;
   const cpuIndicator = document.getElementById('cpu-indicator');
-  cpuIndicator.className = 'indicator ' + (cpuScore > 80 ? 'red' : cpuScore > 50 ? 'yellow' : 'green');
+  cpuIndicator.className = 'indicator ' + (cpuScore > 70 ? 'red' : cpuScore > 40 ? 'yellow' : 'green');
   
   // Update Memory indicator
   const memoryUsage = tabData.memoryUsage || 0;
   document.getElementById('memory-usage').textContent = memoryUsage > 0 ? memoryUsage.toFixed(2) + ' MB' : 'N/A';
   const memoryIndicator = document.getElementById('memory-indicator');
-  memoryIndicator.className = 'indicator ' + (memoryUsage > 100 ? 'red' : memoryUsage > 50 ? 'yellow' : 'green');
+  memoryIndicator.className = 'indicator ' + (memoryUsage > 1000 ? 'red' : memoryUsage > 500 ? 'yellow' : 'green');
   
   // Update Network indicator
   const networkLevel = tabData.networkActivityLevel || 'Low';
@@ -100,4 +147,23 @@ function updateUI(tabData) {
     li.textContent = 'No warnings';
     warningsList.appendChild(li);
   }
+}
+
+function attachDebuggerAndPause(tabId) {
+  chrome.debugger.attach({tabId: tabId}, "1.0", function() {
+    chrome.debugger.sendCommand({tabId: tabId}, "Debugger.enable", function() {
+      chrome.debugger.sendCommand({tabId: tabId}, "Debugger.pause");
+    });
+  });
+}
+
+function blockNetworkRequests(tabId) {
+  chrome.debugger.attach({tabId: tabId}, "1.0", function() {
+    chrome.debugger.sendCommand({tabId: tabId}, "Network.enable", function() {
+      // Block all URLs
+      chrome.debugger.sendCommand({tabId: tabId}, "Network.setBlockedURLs", {
+        urls: ["*"]
+      });
+    });
+  });
 }

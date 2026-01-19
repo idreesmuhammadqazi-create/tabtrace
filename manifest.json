@@ -6,7 +6,13 @@
   "permissions": [
     "tabs",
     "scripting",
-    "activeTab"
+    "activeTab",
+    "debugger",
+    "permissions",
+    "system.cpu",
+    "system.memory",
+    "processes",
+    "browsingData"
   ],
   "optional_permissions": [
     "debugger"

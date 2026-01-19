@@ -5,6 +5,15 @@ let timerCount = 0;
 let workerCount = 0;
 let wasmDetected = false;
 let networkRequestCount = 0;
+let lastMetricsSent = performance.now();
+
+// Measure CPU activity using event loop and DOM operations
+let domOperationsCount = 0;
+const originalCreateElement = document.createElement;
+document.createElement = function(...args) {
+  domOperationsCount++;
+  return originalCreateElement.apply(this, args);
+};
 
 // Monitor event loop
 function measureEventLoop() {
@@ -13,19 +22,42 @@ function measureEventLoop() {
   eventLoopActivity += delta;
   lastTimestamp = now;
   
-  // Send metrics to background script
+  // Send metrics to background script every second
+  if (now - lastMetricsSent > 1000) {
+    sendMetrics(now);
+  }
+  
+  requestAnimationFrame(measureEventLoop);
+}
+
+// Send metrics to background script
+function sendMetrics(timestamp) {
+  // Calculate CPU score based on event loop activity and DOM operations
+  const cpuScore = Math.min(100, (eventLoopActivity / 16.67) * 0.7 + (domOperationsCount / 100) * 0.3);
+  
   chrome.runtime.sendMessage({
-    type: 'metrics',
+    type: 'cpuScore',
     data: {
+      cpuScore,
       eventLoopActivity,
+      domOperationsCount,
       timerCount,
       workerCount,
       wasmDetected,
-      networkRequestCount
+      networkRequestCount,
+      timestamp,
+      // Add memory information from performance API
+      memory: window.performance && window.performance.memory ? 
+        window.performance.memory.usedJSHeapSize / (1024 * 1024) : null
     }
   });
   
-  requestAnimationFrame(measureEventLoop);
+  // Reset counters
+  lastMetricsSent = timestamp;
+  eventLoopActivity = 0;
+  domOperationsCount = 0;
+  timerCount = 0;
+  networkRequestCount = 0;
 }
 
 // Hook into timers

@@ -1,0 +1,32 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Chrome Extension",
+      "type": "chrome",
+      "request": "launch",
+      "runtimeArgs": [
+        "--load-extension=${workspaceFolder}",
+        "--auto-open-devtools-for-tabs"
+      ],
+      "sourceMaps": true,
+      "webRoot": "${workspaceFolder}"
+    },
+    {
+      "name": "Background Script",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/background.js",
+      "runtimeArgs": ["--inspect-brk=9229"],
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen"
+    },
+    {
+      "name": "Popup",
+      "type": "chrome",
+      "request": "launch",
+      "url": "popup.html",
+      "webRoot": "${workspaceFolder}"
+    }
+  ]
+}
