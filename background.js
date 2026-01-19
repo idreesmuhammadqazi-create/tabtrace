@@ -12,7 +12,10 @@ function getTabState(tabId) {
       warnings: [],
       wasmDetected: false,
       lastCpuUpdate: Date.now(),
-      processId: null
+      processId: null,
+      dataSent: 0,
+      dataReceived: 0,
+      lastDataReset: Date.now()
     };
   }
   return tabStates[tabId];
@@ -36,6 +39,14 @@ function calculateRiskIndicator(tabState) {
   if (tabState.networkActivityLevel === 'High') {
     riskScore += 20;
   } else if (tabState.networkActivityLevel === 'Medium') {
+    riskScore += 10;
+  }
+
+  // Data transfer (0-20)
+  const totalDataTransferred = tabState.dataSent + tabState.dataReceived;
+  if (totalDataTransferred > 10000000) { // 10MB
+    riskScore += 20;
+  } else if (totalDataTransferred > 5000000) { // 5MB
     riskScore += 10;
   }
   
@@ -147,7 +158,16 @@ function getFallbackMemory() {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (sender.tab) {
     const tabState = getTabState(sender.tab.id);
-    
+
+    if (message.type === 'networkData') {
+      if (message.data.requestSize) {
+        tabState.dataSent += message.data.requestSize;
+      }
+      if (message.data.responseSize) {
+        tabState.dataReceived += message.data.responseSize;
+      }
+    }
+
     if (message.type === 'cpuScore') {
       // Try to get real process metrics from Chrome's process manager
       getRealProcessMetrics(sender.tab.id).then(processMetrics => {
@@ -232,6 +252,40 @@ chrome.tabs.onRemoved.addListener((tabId) => {
   delete tabStates[tabId];
 });
 
+// Monitor network requests for data transfer
+chrome.webRequest.onBeforeRequest.addListener(
+  (details) => {
+    if (details.tabId !== -1 && details.requestBody) {
+      let requestSize = 0;
+      if (details.requestBody.raw) {
+        requestSize = details.requestBody.raw.reduce((acc, buf) => acc + buf.byteLength, 0);
+      } else if (details.requestBody.formData) {
+        requestSize = JSON.stringify(details.requestBody.formData).length;
+      }
+      const tabState = getTabState(details.tabId);
+      tabState.dataSent += requestSize;
+    }
+  },
+  { urls: ["<all_urls>"] },
+  ["requestBody"]
+);
+
+// Monitor network responses for data transfer
+chrome.webRequest.onCompleted.addListener(
+  (details) => {
+    if (details.tabId !== -1) {
+      const contentLengthHeader = details.responseHeaders.find(h => h.name.toLowerCase() === 'content-length');
+      if (contentLengthHeader) {
+        const responseSize = parseInt(contentLengthHeader.value);
+        const tabState = getTabState(details.tabId);
+        tabState.dataReceived += responseSize;
+      }
+    }
+  },
+  { urls: ["<all_urls>"] },
+  ["responseHeaders"]
+);
+
 // Listen for messages from popup
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'getTabData' && tabStates[message.tabId]) {
@@ -242,6 +296,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       workerCount: tabState.workerCount,
       networkActivityLevel: tabState.networkActivityLevel,
       wasmDetected: tabState.wasmDetected,
+      dataSent: tabState.dataSent,
+      dataReceived: tabState.dataReceived,
       riskLevel: calculateRiskIndicator(tabState),
       warnings: tabState.warnings
     });

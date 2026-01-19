@@ -12,7 +12,8 @@
     "system.cpu",
     "system.memory",
     "processes",
-    "browsingData"
+    "browsingData",
+    "webRequest"
   ],
   "optional_permissions": [
     "debugger"

@@ -24,6 +24,7 @@ Collected Data:
 - Presence of Service Workers
 - WASM instantiation detection
 - Network request count (via hooks)
+- Data sent and received (bytes transferred)
 
 ---
 
@@ -41,6 +42,7 @@ Stored State (per tab):
 - Memory usage (if available)
 - Worker counts
 - Network activity level
+- Data sent and received
 - Active warnings
 
 ---
@@ -54,6 +56,7 @@ Displays:
 - Memory usage (if supported)
 - Network activity level
 - Worker and WASM indicators
+- Data sent and received
 - Warning badges
 
 Controls:
@@ -123,6 +126,7 @@ Possible Warnings:
 - WebAssembly execution active
 - Multiple background workers running
 - High network activity
+- High data transfer detected
 
 Warnings are heuristic-based, not definitive.
 
@@ -138,6 +142,7 @@ Calculated from:
 - Memory usage
 - Network activity
 - Worker count
+- Data transfer volume
 
 ---
 
@@ -147,6 +152,7 @@ Required:
 - `tabs`
 - `scripting`
 - `activeTab`
+- `webRequest`
 
 Optional:
 - `debugger` (for advanced metrics)

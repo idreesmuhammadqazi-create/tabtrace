@@ -71,7 +71,33 @@ window.setTimeout = function(callback, delay, ...args) {
 const originalFetch = window.fetch;
 window.fetch = function(...args) {
   networkRequestCount++;
-  return originalFetch.apply(this, args);
+  const [url, options] = args;
+  let requestSize = 0;
+  if (options && options.body) {
+    if (typeof options.body === 'string') {
+      requestSize = options.body.length;
+    } else if (options.body instanceof Blob || options.body instanceof ArrayBuffer) {
+      requestSize = options.body.size || options.body.byteLength;
+    } else if (options.body instanceof FormData) {
+      // Approximate size
+      requestSize = 200; // rough estimate for form data
+    }
+  }
+  // Send request size to background
+  chrome.runtime.sendMessage({
+    type: 'networkData',
+    data: { requestSize, url }
+  });
+  return originalFetch.apply(this, args).then(response => {
+    // Try to get response size from headers
+    const contentLength = response.headers.get('content-length');
+    let responseSize = contentLength ? parseInt(contentLength) : 0;
+    chrome.runtime.sendMessage({
+      type: 'networkData',
+      data: { responseSize, url }
+    });
+    return response;
+  });
 };
 
 // Detect WebAssembly usage

@@ -96,6 +96,15 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 });
 
+// Format bytes to human readable
+function formatBytes(bytes) {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
 // Update UI with tab data
 function updateUI(tabData) {
   // Update CPU indicator
@@ -127,6 +136,18 @@ function updateUI(tabData) {
   document.getElementById('wasm-status').textContent = wasmDetected ? 'Yes' : 'No';
   const wasmIndicator = document.getElementById('wasm-indicator');
   wasmIndicator.className = 'indicator ' + (wasmDetected ? 'red' : 'green');
+
+  // Update Data Sent indicator
+  const dataSent = tabData.dataSent || 0;
+  document.getElementById('data-sent').textContent = formatBytes(dataSent);
+  const dataSentIndicator = document.getElementById('data-sent-indicator');
+  dataSentIndicator.className = 'indicator ' + (dataSent > 5000000 ? 'red' : dataSent > 1000000 ? 'yellow' : 'green');
+
+  // Update Data Received indicator
+  const dataReceived = tabData.dataReceived || 0;
+  document.getElementById('data-received').textContent = formatBytes(dataReceived);
+  const dataReceivedIndicator = document.getElementById('data-received-indicator');
+  dataReceivedIndicator.className = 'indicator ' + (dataReceived > 10000000 ? 'red' : dataReceived > 5000000 ? 'yellow' : 'green');
   
   // Update Risk indicator
   const riskIndicator = document.getElementById('risk-indicator');
